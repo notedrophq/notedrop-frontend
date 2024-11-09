@@ -2,14 +2,14 @@
 
 import Image from "next/image";
 import logo from "../app/assets/logo.png";
-import { useRouter, useSelectedLayoutSegment } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
   Dialog,
   DialogContent,
   DialogTitle,
   DialogDescription,
 } from "./ui/dialog";
-import { use, useState } from "react";
+import { useState } from "react";
 import { Input } from "./ui/input";
 import PasswordInput from "./custompassword";
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
@@ -21,27 +21,32 @@ import {
 import { Toaster, toast } from "sonner";
 import { Button } from "./ui/button";
 import { Progress } from "./ui/progress";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import axios from "axios";
-
 
 export default function Topbar() {
   const router = useRouter();
   const provider = new GoogleAuthProvider();
-  const [IsOpen, setIsOpen] =  useState(false);
+  const [IsOpen, setIsOpen] = useState(false);
   const [step, setStep] = useState(1);
-  const [Password, setPassword] = useState("");
-  const [email, setEmail] = useState<string>("");
-  const [username, setUsername] = useState<string>("");
-  const [firebaseid, setfirebaseid] = useState<string>("");
-  const [selectedOption, setSelectedOption]= useState<string>("");
-  const [avatar, setAvatar] = useState<string>("https://github.com/shadcn.png");
+  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("");
+  const [avatar, setAvatar] = useState(
+    "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"
+  );
+  const [description, setDescription] = useState("");
+  const [username, setUsername] = useState("");
+  const maxChars = 800;
 
+  const handleChange = (event: any) => {
+    if (event.target.value.length <= maxChars) {
+      setDescription(event.target.value);
+    }
+  };
 
   const nextStep = () => {
     if (step < 3) setStep(step + 1);
   };
-
 
   const prevStep = () => {
     if (step > 1) setStep(step - 1);
@@ -50,10 +55,6 @@ export default function Topbar() {
   const progressPercentage = (step / 3) * 100;
 
   const openDialog = () => setIsOpen(true);
-  const handleInputChange = (e: any) => {
-    const value = e.target.value;
-    setSelectedOption(value);
-  }
 
   function convertImageToBase64(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -66,116 +67,154 @@ export default function Topbar() {
 
   function handleFileInput(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
-    if (file?.size && file.size > 5 * 1024 * 1024 ) {
-      toast.error("File size is too large. Please upload a file less than 5MB")
+    if (file?.size && file.size > 7 * 1024 * 1024) {
+      toast.error("File size is too large. Please upload a file less than 5MB");
     } else {
       if (file) {
         convertImageToBase64(file)
           .then((base64String) => {
-            setAvatar(base64String)
+            setAvatar(base64String);
           })
-          .catch((error) => console.error('Error converting image:', error));
+          .catch((error) => console.error("Error converting image:", error));
       }
     }
   }
 
   const registerUserwithEmail = async () => {
-    try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, Password);
-      const user = userCredential.user;
-      sendEmailVerification(user);
-      setfirebaseid(user.uid);
-      toast.success("Account created successfully");
-      axios.post("http://localhost:3001/api/create-user", {
-        email: email,
-        username: username,
-        avatar: avatar,
-        region: selectedOption,
-        firebaseId: firebaseid,
-        favoriteSubjects: [],
-      })
-      setIsOpen(false);
-    } catch (error) {
-      console.error(error);
-      toast.error("An error occured while creating your account");
+    if (
+      username === "" ||
+      email === "" ||
+      password === "" ||
+      description === ""
+    ) {
+      toast.error("Please check your information!");
+    } else {
+      try {
+        const user = await createUserWithEmailAndPassword(
+          auth,
+          email,
+          password
+        );
+        const userId = auth.currentUser?.getIdToken;
+
+        sendEmailVerification(auth.currentUser!);
+
+        axios.post(`https://${process.env.API_BASE_URL}/api/v1/createuser`, {
+          body: {
+            email: email,
+            username: username,
+            avatar: avatar,
+            description: description,
+            firebaseId: userId,
+            favorite_subjects: ["test"],
+            profileCompleted: true,
+          },
+        });
+
+        toast.success("Thank you for Registering, Check your email");
+      } catch (error) {
+        toast.error("Error Accoured please try again");
+      }
     }
-  }
+  };
 
   return (
     <div className="w-full h-14 flex items-center justify-between shadow-custom">
       <Toaster richColors position="top-right" closeButton />
       <Dialog open={IsOpen} onOpenChange={setIsOpen}>
-      <DialogContent>
-        <DialogTitle className="text-center text-3xl font-light">Create Account</DialogTitle>
-        {/* Progress Bar */}
-        <div className="flex items-center justify-center">
-          <Progress value={progressPercentage} className="w-[350px]"/>
-        </div>
+        <DialogContent className="max-w-[400px] w-11/12">
+          <DialogTitle className="text-center text-3xl font-light">
+            Create Account
+          </DialogTitle>
 
-        {/* Step 1 */}
-        {step === 1 && (
-          <div className="flex justify-center items-center flex-col">
-            <p className="text-center text-2xl font-light mb-4 mt-4">Fill Account Details</p>
-            <Input className="pr-10 placeholder:text-black placeholder:font-light w-[350px] mt-3" placeholder="Email Address" onChange={(e) => setEmail(e.target.value)}/>
-            <Input className="pr-10 placeholder:text-black placeholder:font-light w-[350px] mt-3 mb-3" placeholder="Username" onChange={(e) => setUsername(e.target.value)}/>
-            <PasswordInput onPasswordChange={setPassword}/>
+          <div className="flex items-center justify-center">
+            <Progress value={progressPercentage} className="w-[250px]" />
           </div>
-        )}
 
-        {step === 2 && (
-          <div className="flex justify-center items-center flex-col">
-            <p>Customize your Profile</p>
-            <Avatar className="w-[150px] h-[150px] mt-2 mb-2">
-              <AvatarImage src={avatar}/>
-            </Avatar>
-            <Input type="file" className="w-[350px]" onChange={handleFileInput} accept=".png,.jpg,.jpeg"/>
-            <select value={selectedOption} onChange={handleInputChange} className="font-light w-[350px] mt-2 flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50">
-                <option value="">Choose Account Region</option>
-                <option value="world">🌎 World</option>
-                <option value="asia">🌏 Asia</option>
-                <option value="africa">🌍 Africa</option>
-                <option value="europe">🇪🇺 Europe</option>
-                <option value="scandinavia">🇳🇴 Scandinavia</option>
-                <option value="northamerica">🇨🇦 North America</option>
-                <option value="unitedstate">🇺🇸 United States</option>
-                <option value="mexico">🇲🇽 Mexico</option>
-                <option value="southamerica">🇨🇱 South America</option>
-                <option value="australia">🇦🇺 Australia</option>
-                <option value="oceania">🇳🇿 Oceania</option>
-                <option value="middleeast">🇦🇪 Middle East</option>
-                <option value="russia">🇷🇺 Russia</option>
-              </select>
-          </div>
-        )}
-
-        {step === 3 && (
-          <div className="flex justify-center items-center flex-col">
-            <p className="text-center font-light text-2xl">Account Details Summary</p>
-            <Avatar className="w-[150px] h-[150px] mt-2 mb-2">
-              <AvatarImage src={avatar} alt="avatar" />
-            </Avatar>
-            <p className="font-light text-xl">Email: {email}</p>
-            <p className="font-light text-xl">Username: {username}</p>
-          </div>
-        )}
-
-        {/* Navigation Buttons */}
-        <div className="mt-4 flex justify-between">
-          <Button disabled={step === 1} onClick={prevStep}>
-            Previous
-          </Button>
-          {step < 3 ? (
-            <Button onClick={nextStep}>Next</Button>
-          ) : (
-            <Button onClick={registerUserwithEmail}>Submit</Button>
+          {step === 1 && (
+            <div className="flex items-center justify-center flex-col">
+              <Input
+                type="email"
+                onChange={(e) => setEmail(e.target.value)}
+                className="pr-10 placeholder:text-black placeholder:font-light w-[250px] mb-2"
+                placeholder="Email Address"
+              />
+              <Input
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Username"
+                className="pr-10 placeholder:text-black placeholder:font-light w-[250px] mb-2"
+              />
+              <PasswordInput onPasswordChange={setPassword} />
+            </div>
           )}
-        </div>
-        <div className="mt-2 flex flex-row">
-          <p className="font-light">Already have an Account?</p>
-          <p className="text-[#15D364] ml-1 font-light">Sign In</p>
-        </div>
-      </DialogContent>
-    </Dialog>
+
+          {step === 2 && (
+            <div className="flex items-center justify-center flex-col">
+              <p className="text-center text-xl font-thin">
+                Customize your Profile!
+              </p>
+              <div className="mt-3 items-center justify-center">
+                <Avatar className="w-[150px] h-[150px]">
+                  <AvatarImage src={avatar}></AvatarImage>
+                </Avatar>
+              </div>
+              <div>
+                <textarea
+                  value={description}
+                  onChange={handleChange}
+                  maxLength={maxChars}
+                  placeholder="Tell us more about you"
+                  rows={10}
+                  cols={23}
+                  className="mt-3 resize-none p-2 outline-none placeholder:text-black placeholder:text-sm placeholder:font-light border-[1px] focus:font-thin border-black rounded-lg focus:outline-none"
+                />
+                <p className="font-thin text-sm">
+                  {description.length} / {maxChars}
+                </p>
+              </div>
+              <div className="mt-3">
+                <Input
+                  onChange={handleFileInput}
+                  type="file"
+                  accept=".jpg,.png,.jpeg"
+                />
+              </div>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="flex items-center justify-center flex-col">
+              <div>
+                <p className="text-xl font-thin text-center">Profile Summary</p>
+              </div>
+              <div className="mt-2">
+                <Avatar className="w-[150px] h-[150px]">
+                  <AvatarImage src={avatar}></AvatarImage>
+                </Avatar>
+              </div>
+              <div className="text-lg font-thin mt-2 block">
+                <p>Email: {email}</p>
+                <p>Username: {username}</p>
+              </div>
+            </div>
+          )}
+
+          <div className="mt-4 flex justify-between">
+            <Button disabled={step === 1} onClick={prevStep}>
+              Previous
+            </Button>
+            {step < 3 ? (
+              <Button onClick={nextStep}>Next</Button>
+            ) : (
+              <Button>Submit</Button>
+            )}
+          </div>
+          <div className="mt-2 flex flex-row">
+            <p className="font-light">Already have an Account?</p>
+            <p className="text-[#15D364] ml-1 font-light">Sign In</p>
+          </div>
+        </DialogContent>
+      </Dialog>
       <div className="flex items-center pl-2">
         <Image src={logo} alt="logo" width={48} height={48} />
       </div>
@@ -204,7 +243,7 @@ export default function Topbar() {
           className="font-light pr-2 hover:text-[#15D364] duration-300 transition-colors"
           onClick={openDialog}
         >
-          Sign In
+          Sign Up
         </button>
       </div>
     </div>
