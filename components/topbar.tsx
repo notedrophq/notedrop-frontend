@@ -23,6 +23,7 @@ import { Button } from "./ui/button";
 import { Progress } from "./ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import axios from "axios";
+import { FaGoogle } from "react-icons/fa6";
 
 export default function Topbar() {
   const router = useRouter();
@@ -37,11 +38,29 @@ export default function Topbar() {
   const [description, setDescription] = useState("");
   const [username, setUsername] = useState("");
   const maxChars = 800;
+  const [isloginopen, setIsloginOpen] = useState(false);
 
   const handleChange = (event: any) => {
     if (event.target.value.length <= maxChars) {
       setDescription(event.target.value);
     }
+  };
+
+  const onOpenchange = () => {
+    setIsOpen(false);
+    setAvatar(
+      "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"
+    );
+    setEmail("");
+    setPassword("");
+    setDescription("");
+    setUsername("");
+    setStep(1);
+  };
+
+  const openLoginDialog = () => {
+    setIsOpen(false);
+    setIsloginOpen(true);
   };
 
   const nextStep = () => {
@@ -121,7 +140,7 @@ export default function Topbar() {
   return (
     <div className="w-full h-14 flex items-center justify-between shadow-custom">
       <Toaster richColors position="top-right" closeButton />
-      <Dialog open={IsOpen} onOpenChange={setIsOpen}>
+      <Dialog open={IsOpen} onOpenChange={onOpenchange}>
         <DialogContent className="max-w-[400px] w-11/12">
           <DialogTitle className="text-center text-3xl font-light">
             Create Account
@@ -136,13 +155,13 @@ export default function Topbar() {
               <Input
                 type="email"
                 onChange={(e) => setEmail(e.target.value)}
-                className="pr-10 placeholder:text-black placeholder:font-light w-[250px] mb-2"
+                className="pr-10 placeholder:text-black placeholder:font-light w-[250px] mb-2 focus:font-light font-light"
                 placeholder="Email Address"
               />
               <Input
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="Username"
-                className="pr-10 placeholder:text-black placeholder:font-light w-[250px] mb-2"
+                className="pr-10 placeholder:text-black placeholder:font-light w-[250px] mb-2 focus:font-light font-light"
               />
               <PasswordInput onPasswordChange={setPassword} />
             </div>
@@ -166,7 +185,7 @@ export default function Topbar() {
                   placeholder="Tell us more about you"
                   rows={10}
                   cols={23}
-                  className="mt-3 resize-none p-2 outline-none placeholder:text-black placeholder:text-sm placeholder:font-light border-[1px] focus:font-thin border-black rounded-lg focus:outline-none"
+                  className="mt-3 resize-none p-2 font-light outline-none placeholder:text-black placeholder:text-sm placeholder:font-light border-[1px] focus:font-thin border-black rounded-lg focus:outline-none"
                 />
                 <p className="font-thin text-sm">
                   {description.length} / {maxChars}
@@ -206,12 +225,39 @@ export default function Topbar() {
             {step < 3 ? (
               <Button onClick={nextStep}>Next</Button>
             ) : (
-              <Button>Submit</Button>
+              <Button onClick={registerUserwithEmail}>Submit</Button>
             )}
           </div>
           <div className="mt-2 flex flex-row">
             <p className="font-light">Already have an Account?</p>
-            <p className="text-[#15D364] ml-1 font-light">Sign In</p>
+            <p
+              className="text-[#15D364] ml-1 font-light cursor-pointer"
+              onClick={openLoginDialog}
+            >
+              Sign In
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={isloginopen} onOpenChange={setIsloginOpen}>
+        <DialogContent className="max-w-[300px] w-11/12">
+          <DialogTitle className="text-center text-3xl font-light">
+            Sign In
+          </DialogTitle>
+          <div className="flex items-center justify-center flex-col">
+            <Input
+              className="pr-10 placeholder:text-black placeholder:font-light w-[250px] mb-2 focus:font-light font-light"
+              placeholder="Email Address"
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <PasswordInput onPasswordChange={setPassword} />
+            <Button className="w-[250px] mt-2">Sign In</Button>
+          </div>
+          <div>
+            <p className="font-thin text-center">or continue with</p>
+            <Button className="bg-transparent border-2 border-slate-200 hover:bg-opacity-10 hover:bg-slate-800 text-slate-500 w-[250px] h-[40px] mt-2 text-[16px] rounded-lg transition-all duration-300">
+              Google
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

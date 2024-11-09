@@ -25,7 +25,7 @@ export default function PasswordInput({
       <Input
         type={showPassword ? "text" : "password"}
         placeholder="Password"
-        className="pr-10 placeholder:text-black placeholder:font-light w-[250px]"
+        className="pr-10 placeholder:text-black placeholder:font-light w-[250px] focus:font-light font-light"
         onChange={handleChange}
       />
       <button
