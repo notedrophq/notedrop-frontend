@@ -3,16 +3,16 @@
 import Image from "next/image";
 import logo from "../app/assets/logo.png";
 import { useRouter } from "next/navigation";
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogDescription,
-} from "./ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "./ui/dialog";
 import { useState } from "react";
 import { Input } from "./ui/input";
 import PasswordInput from "./custompassword";
-import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import {
+  GoogleAuthProvider,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  User,
+} from "firebase/auth";
 import auth from "../app/firebase/firebase";
 import {
   createUserWithEmailAndPassword,
@@ -23,7 +23,6 @@ import { Button } from "./ui/button";
 import { Progress } from "./ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import axios from "axios";
-import { FaGoogle } from "react-icons/fa6";
 
 export default function Topbar() {
   const router = useRouter();
@@ -61,6 +60,11 @@ export default function Topbar() {
   const openLoginDialog = () => {
     setIsOpen(false);
     setIsloginOpen(true);
+  };
+
+  const opensignupDialog = () => {
+    setIsOpen(true);
+    setIsloginOpen(false);
   };
 
   const nextStep = () => {
@@ -134,6 +138,40 @@ export default function Topbar() {
       } catch (error) {
         toast.error("Error Accoured please try again");
       }
+    }
+  };
+
+  const isEmailVerified = (user: User) => {
+    if (!user.emailVerified) {
+      toast.warning("Please Verify your email to continue");
+    } else {
+      toast.success("Sign In successful");
+      router.push("/dashboard");
+    }
+  };
+
+  const emailSignIn = async () => {
+    try {
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+      isEmailVerified(userCredential.user);
+    } catch (err) {
+      console.log("Login Failed");
+      toast.error("Login Failed please try again");
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+      router.push("/dashboard");
+    } catch (err) {
+      console.log(err);
+      toast.error("Google Login Failed");
     }
   };
 
@@ -251,13 +289,30 @@ export default function Topbar() {
               onChange={(e) => setEmail(e.target.value)}
             />
             <PasswordInput onPasswordChange={setPassword} />
-            <Button className="w-[250px] mt-2">Sign In</Button>
+            <Button className="w-[250px] mt-2" onClick={emailSignIn}>
+              Sign In
+            </Button>
           </div>
           <div>
             <p className="font-thin text-center">or continue with</p>
-            <Button className="bg-transparent border-2 border-slate-200 hover:bg-opacity-10 hover:bg-slate-800 text-slate-500 w-[250px] h-[40px] mt-2 text-[16px] rounded-lg transition-all duration-300">
+            <Button
+              onClick={handleGoogleSignIn}
+              className="bg-transparent border-2 border-slate-200 hover:bg-opacity-10 hover:bg-slate-800 text-slate-500 w-[250px] h-[40px] mt-2 text-[16px] rounded-lg transition-all duration-300"
+            >
               Google
             </Button>
+            <p className="text-[9px] text-slate-600 mt-2">
+              By signing in with google you accept privacy policy
+            </p>
+            <p className="font-light flex flex-row text-sm mt-2">
+              Not an User?
+              <p
+                className="ml-2 text-[#15D364] font-light text-sm"
+                onClick={opensignupDialog}
+              >
+                Sign up
+              </p>
+            </p>
           </div>
         </DialogContent>
       </Dialog>
